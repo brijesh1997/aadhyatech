@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password_hash     String
+  role              Role           @default(USER)
+  first_name        String?
+  last_name         String?
+  mobile            String?
+  country           String?
+  state             String?
+  city              String?
+  stripe_customer_id String?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+  subscriptions     Subscription[]
+  transactions      Transaction[]
+  business_profile  BusinessProfile?
+}
+
+model Plan {
+  id                  String         @id @default(uuid())
+  name                String
+  price_inr           Float
+  price_usd           Float
+  interval            Interval
+  features            Json
+  stripe_price_id_inr String?
+  stripe_price_id_usd String?
+  is_active           Boolean        @default(true)
+  is_popular          Boolean        @default(false)
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  subscriptions       Subscription[]
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  user_id                String
+  plan_id                String
+  status                 SubscriptionStatus @default(ACTIVE)
+  current_period_end     DateTime
+  stripe_subscription_id String?
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
+
+  user User @relation(fields: [user_id], references: [id])
+  plan Plan @relation(fields: [plan_id], references: [id])
+}
+
+model PageContent {
+  id           String   @id @default(uuid())
+  page_name    String
+  section_name String
+  content      Json
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@unique([page_name, section_name])
+}
+
+model Inquiry {
+  id         String   @id @default(uuid())
+  name       String
+  email      String
+  message    String
+  created_at DateTime @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum Interval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+}
+
+model BusinessProfile {
+  id              String   @id @default(uuid())
+  user_id         String   @unique
+  business_name   String
+  industry        String
+  description     String
+  existing_website String?
+  website_goal    String
+  target_audience String
+  logo_url        String?
+  primary_color   String?
+  secondary_color String?
+  contact_email   String?
+  contact_phone   String?
+  website_status  String   @default("In Review")
+  preview_url     String?
+  selected_plan   String?
+  plan_price      String?
+  payment_status  String   @default("Pending")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id])
+}
+
+model SystemSettings {
+  id                    Int     @id @default(1)
+  ai_generation_enabled Boolean @default(true)
+  openai_api_key        String?
+  google_client_id      String?
+  stripe_secret_key     String?
+  stripe_publishable_key String?
+  stripe_webhook_secret String?
+  updated_at            DateTime @updatedAt
+}
+
+model Transaction {
+  id                String   @id @default(uuid())
+  user_id           String
+  amount            Float
+  currency          String   @default("usd")
+  status            String   // e.g., "succeeded", "failed", "pending"
+  stripe_payment_id String?
+  created_at        DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
